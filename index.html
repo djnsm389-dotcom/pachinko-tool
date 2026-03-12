@@ -1,3 +1,4 @@
+
 <!DOCTYPE html>
 <html lang="ja">
 <head>
@@ -6,7 +7,6 @@
   <title>4円パチンコ新台適正導入台数算出ツール</title>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/react/18.2.0/umd/react.production.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.2.0/umd/react-dom.production.min.js"></script>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/babel-standalone/7.23.2/babel.min.js"></script>
   <style>
     * { box-sizing: border-box; margin: 0; padding: 0; }
     body { background: #0d0f14; color: #e8e8e8; font-family: 'Noto Sans JP', 'Hiragino Sans', sans-serif; }
@@ -17,14 +17,14 @@
 </head>
 <body>
   <div id="root"></div>
-  <script type="text/babel">
-    const { useState, useCallback } = React;
+  <script>
+    const { useState, useCallback, createElement: h } = React;
 
     const DECAY_RATIOS = {
-      特上: [1.000, 0.965, 0.947, 0.912, 0.895],
-      良:   [1.000, 0.947, 0.895, 0.842, 0.789],
-      並:   [1.000, 0.895, 0.789, 0.702, 0.596],
-      悪:   [1.000, 0.842, 0.702, 0.544, 0.404],
+      特上: [1.000, 0.968, 0.850, 0.780, 0.720],
+      良:   [1.000, 0.947, 0.780, 0.680, 0.580],
+      並:   [1.000, 0.895, 0.680, 0.550, 0.430],
+      悪:   [1.000, 0.842, 0.580, 0.440, 0.330],
     };
 
     const EVALUATIONS = ["特上", "良", "並", "悪"];
@@ -46,52 +46,58 @@
     }
 
     function Section({ title, children }) {
-      return (
-        <div style={{
+      return h('div', {
+        style: {
           background: "rgba(255,255,255,0.03)",
           border: "1px solid rgba(255,200,0,0.15)",
           borderRadius: 12,
           padding: "24px 28px",
           marginBottom: 24,
-        }}>
-          <div style={{
+        }
+      },
+        h('div', {
+          style: {
             fontSize: 11,
             letterSpacing: "0.2em",
             color: "#f0c040",
             textTransform: "uppercase",
             marginBottom: 18,
             fontWeight: 700,
-          }}>{title}</div>
-          {children}
-        </div>
+          }
+        }, title),
+        children
       );
     }
 
-    function InputRow({ label, value, onChange, suffix = "", step = "1", min = "0" }) {
-      return (
-        <div style={{ display: "flex", alignItems: "center", marginBottom: 12, gap: 12, flexWrap: "wrap" }}>
-          <label style={{ color: "#aaa", fontSize: 13, width: 200, flexShrink: 0 }}>{label}</label>
-          <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-            <input
-              type="number"
-              value={value}
-              onChange={e => onChange(e.target.value)}
-              step={step}
-              min={min}
-              style={{
-                background: "rgba(255,255,255,0.06)",
-                border: "1px solid rgba(255,200,0,0.3)",
-                borderRadius: 6,
-                color: "#fff",
-                padding: "6px 12px",
-                fontSize: 14,
-                width: 130,
-                outline: "none",
-              }}
-            />
-            {suffix && <span style={{ color: "#888", fontSize: 13 }}>{suffix}</span>}
-          </div>
-        </div>
+    function InputRow({ label, value, onChange, suffix, step, min }) {
+      suffix = suffix || "";
+      step = step || "1";
+      min = min || "0";
+      return h('div', {
+        style: { display: "flex", alignItems: "center", marginBottom: 12, gap: 12, flexWrap: "wrap" }
+      },
+        h('label', { style: { color: "#aaa", fontSize: 13, width: 200, flexShrink: 0 } }, label),
+        h('div', { style: { display: "flex", alignItems: "center", gap: 8 } },
+          h('input', {
+            type: "number",
+            value: value,
+            onChange: function(e) { onChange(e.target.value); },
+            onFocus: function(e) { e.target.select(); },
+            step: step,
+            min: min,
+            style: {
+              background: "rgba(255,255,255,0.06)",
+              border: "1px solid rgba(255,200,0,0.3)",
+              borderRadius: 6,
+              color: "#fff",
+              padding: "6px 12px",
+              fontSize: 14,
+              width: 130,
+              outline: "none",
+            }
+          }),
+          suffix ? h('span', { style: { color: "#888", fontSize: 13 } }, suffix) : null
+        )
       );
     }
 
@@ -104,56 +110,51 @@
       const [areaPeakCustomers, setAreaPeakCustomers] = useState(1500);
       const [stores, setStores] = useState(defaultStores);
 
-      const updateStore = useCallback((i, field, val) => {
-        setStores(prev => prev.map((s, idx) => idx === i ? { ...s, [field]: val } : s));
+      const updateStore = useCallback(function(i, field, val) {
+        setStores(function(prev) {
+          return prev.map(function(s, idx) { return idx === i ? Object.assign({}, s, { [field]: val }) : s; });
+        });
       }, []);
 
-      const addStore = () => setStores(prev => [...prev, { name: `競合${String.fromCharCode(65 + prev.length - 1)}`, machines: 200 }]);
-      const removeStore = i => { if (stores.length > 1) setStores(prev => prev.filter((_, idx) => idx !== i)); };
+      function addStore() {
+        setStores(function(prev) {
+          return [...prev, { name: "競合" + String.fromCharCode(64 + prev.length), machines: 200 }];
+        });
+      }
+
+      function removeStore(i) {
+        if (stores.length > 1) {
+          setStores(function(prev) { return prev.filter(function(_, idx) { return idx !== i; }); });
+        }
+      }
 
       const prefSales = nationalSales * (prefRatio / 100);
       const maxPlayers = prefMachines * (peakOccupancy / 100);
       const baseOutshare = maxPlayers > 0 ? (prefSales / maxPlayers) * 100 : 0;
 
       const outshareByEval = {};
-      EVALUATIONS.forEach(ev => {
-        outshareByEval[ev] = DECAY_RATIOS[ev].map(r => baseOutshare * r);
+      EVALUATIONS.forEach(function(ev) {
+        outshareByEval[ev] = DECAY_RATIOS[ev].map(function(r) { return baseOutshare * r; });
       });
 
-      const totalAreaMachines = stores.reduce((s, st) => s + (Number(st.machines) || 0), 0);
+      const totalAreaMachines = stores.reduce(function(s, st) { return s + (Number(st.machines) || 0); }, 0);
       const myStore = stores[0];
       const myShare = totalAreaMachines > 0 ? (Number(myStore.machines) / totalAreaMachines) : 0;
 
-      const weeklyAreaCustomers = outshareByEval[selectedEval].map(os =>
-        areaPeakCustomers * (os / 100)
-      );
+      const weeklyAreaCustomers = outshareByEval[selectedEval].map(function(os) { return areaPeakCustomers * (os / 100); });
+      const myWeeklyCount = weeklyAreaCustomers.map(function(c) { return Math.round(c * myShare * 10) / 10; });
+      const totalAreaCount = weeklyAreaCustomers.map(function(c) { return Math.round(c * 10) / 10; });
 
-      const myWeeklyCount = weeklyAreaCustomers.map(c => Math.round(c * myShare * 10) / 10);
-      const totalAreaCount = weeklyAreaCustomers.map(c => Math.round(c * 10) / 10);
-
-      const totalImportedByStore = stores.map(st => {
+      const totalImported = stores.reduce(function(sum, st) {
         const share = totalAreaMachines > 0 ? Number(st.machines) / totalAreaMachines : 0;
-        return Math.round(weeklyAreaCustomers[0] * share * 10) / 10;
-      });
-      const totalImported = totalImportedByStore.reduce((a, b) => a + b, 0);
-      const sufficiencyRate = weeklyAreaCustomers[0] > 0
-        ? (totalImported / weeklyAreaCustomers[0]) * 100
-        : 0;
+        return sum + Math.round(weeklyAreaCustomers[0] * share * 10) / 10;
+      }, 0);
+      const sufficiencyRate = weeklyAreaCustomers[0] > 0 ? (totalImported / weeklyAreaCustomers[0]) * 100 : 0;
 
-      const cardStyle = {
-        background: "rgba(255,255,255,0.04)",
-        border: "1px solid rgba(255,255,255,0.08)",
-        borderRadius: 8,
-        padding: "10px 16px",
-        marginBottom: 8,
-        display: "flex",
-        alignItems: "center",
-        gap: 10,
-        flexWrap: "wrap",
-      };
+      const isBad = selectedEval === "悪";
 
-      return (
-        <div style={{
+      return h('div', {
+        style: {
           minHeight: "100vh",
           background: "#0d0f14",
           color: "#e8e8e8",
@@ -161,356 +162,306 @@
           padding: "32px 24px",
           maxWidth: 900,
           margin: "0 auto",
-        }}>
-          <div style={{ marginBottom: 36 }}>
-            <div style={{
-              fontSize: 11,
-              letterSpacing: "0.25em",
-              color: "#f0c040",
-              marginBottom: 8,
-              textTransform: "uppercase",
-            }}>Pachinko Unit Analysis Tool</div>
-            <h1 style={{
-              fontSize: 26,
-              fontWeight: 700,
-              margin: 0,
-              color: "#fff",
-              letterSpacing: "0.02em",
-            }}>4円パチンコ新台適正導入台数算出ツール</h1>
-          </div>
+        }
+      },
 
-          <Section title="01 ／ 県内データ">
-            <InputRow label="4円設置台数" value={prefMachines} onChange={v => setPrefMachines(Number(v))} suffix="台" />
-            <InputRow label="ピーク稼働率" value={peakOccupancy} onChange={v => setPeakOccupancy(Number(v))} suffix="%" step="0.1" />
-            <InputRow label="県内販売按分率" value={prefRatio} onChange={v => setPrefRatio(Number(v))} suffix="%" step="0.1" />
-            <div style={{
-              marginTop: 16,
-              padding: "12px 16px",
-              background: "rgba(240,192,64,0.08)",
-              borderRadius: 8,
-              border: "1px solid rgba(240,192,64,0.2)",
-              fontSize: 13,
-            }}>
-              <div style={{ color: "#f0c040", marginBottom: 4, fontSize: 11, letterSpacing: "0.1em" }}>算出結果</div>
-              <div style={{ display: "flex", gap: 32, flexWrap: "wrap" }}>
-                <span>県内最大遊技人数：<strong style={{ color: "#fff" }}>{Math.round(maxPlayers).toLocaleString()}人</strong></span>
-              </div>
-            </div>
-          </Section>
+        // ヘッダー
+        h('div', { style: { marginBottom: 36 } },
+          h('div', { style: { fontSize: 11, letterSpacing: "0.25em", color: "#f0c040", marginBottom: 8 } }, "PACHINKO UNIT ANALYSIS TOOL"),
+          h('h1', { style: { fontSize: 26, fontWeight: 700, margin: 0, color: "#fff", letterSpacing: "0.02em" } }, "4円パチンコ新台適正導入台数算出ツール")
+        ),
 
-          <Section title="02 ／ 機種データ">
-            <InputRow label="全国販売台数" value={nationalSales} onChange={v => setNationalSales(Number(v))} suffix="台" />
-            <div style={{
-              marginTop: 16,
-              padding: "12px 16px",
-              background: "rgba(240,192,64,0.08)",
-              borderRadius: 8,
-              border: "1px solid rgba(240,192,64,0.2)",
-              fontSize: 13,
-              marginBottom: 20,
-            }}>
-              <div style={{ color: "#f0c040", marginBottom: 4, fontSize: 11, letterSpacing: "0.1em" }}>算出結果</div>
-              <div style={{ display: "flex", gap: 32, flexWrap: "wrap" }}>
-                <span>県内販売台数：<strong style={{ color: "#fff" }}>{Math.round(prefSales).toLocaleString()}台</strong></span>
-                <span>基準アウトシェア：<strong style={{ color: "#fff" }}>{fmt(baseOutshare)}%</strong></span>
-              </div>
-            </div>
+        // 01 県内データ
+        h(Section, { title: "01 / 県内データ" },
+          h(InputRow, { label: "4円設置台数", value: prefMachines, onChange: function(v) { setPrefMachines(Number(v)); }, suffix: "台" }),
+          h(InputRow, { label: "ピーク稼働率", value: peakOccupancy, onChange: function(v) { setPeakOccupancy(Number(v)); }, suffix: "%", step: "0.1" }),
+          h(InputRow, { label: "県内販売按分率", value: prefRatio, onChange: function(v) { setPrefRatio(Number(v)); }, suffix: "%", step: "0.1" }),
+          h('div', {
+            style: { marginTop: 16, padding: "12px 16px", background: "rgba(240,192,64,0.08)", borderRadius: 8, border: "1px solid rgba(240,192,64,0.2)", fontSize: 13 }
+          },
+            h('div', { style: { color: "#f0c040", marginBottom: 4, fontSize: 11, letterSpacing: "0.1em" } }, "算出結果"),
+            h('span', null, "県内最大遊技人数：", h('strong', { style: { color: "#fff" } }, Math.round(maxPlayers).toLocaleString() + "人"))
+          )
+        ),
 
-            <div style={{ fontSize: 11, letterSpacing: "0.1em", color: "#888", marginBottom: 10 }}>評価別アウトシェア推移（%）</div>
-            <div style={{ overflowX: "auto" }}>
-              <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 13 }}>
-                <thead>
-                  <tr>
-                    <th style={{ padding: "8px 12px", textAlign: "left", color: "#666", fontWeight: 400, borderBottom: "1px solid #222" }}>週</th>
-                    {EVALUATIONS.map(ev => (
-                      <th key={ev} style={{
-                        padding: "8px 16px",
-                        textAlign: "center",
+        // 02 機種データ
+        h(Section, { title: "02 / 機種データ" },
+          h(InputRow, { label: "全国販売台数", value: nationalSales, onChange: function(v) { setNationalSales(Number(v)); }, suffix: "台" }),
+          h('div', {
+            style: { marginTop: 16, padding: "12px 16px", background: "rgba(240,192,64,0.08)", borderRadius: 8, border: "1px solid rgba(240,192,64,0.2)", fontSize: 13, marginBottom: 20 }
+          },
+            h('div', { style: { color: "#f0c040", marginBottom: 4, fontSize: 11, letterSpacing: "0.1em" } }, "算出結果"),
+            h('div', { style: { display: "flex", gap: 32, flexWrap: "wrap" } },
+              h('span', null, "県内販売台数：", h('strong', { style: { color: "#fff" } }, Math.round(prefSales).toLocaleString() + "台")),
+              h('span', null, "基準アウトシェア：", h('strong', { style: { color: "#fff" } }, fmt(baseOutshare) + "%"))
+            )
+          ),
+          h('div', { style: { fontSize: 11, letterSpacing: "0.1em", color: "#888", marginBottom: 10 } }, "評価別アウトシェア推移（%）"),
+          h('div', { style: { overflowX: "auto" } },
+            h('table', { style: { width: "100%", borderCollapse: "collapse", fontSize: 13 } },
+              h('thead', null,
+                h('tr', null,
+                  h('th', { style: { padding: "8px 12px", textAlign: "left", color: "#666", fontWeight: 400, borderBottom: "1px solid #222" } }, "週"),
+                  EVALUATIONS.map(function(ev) {
+                    return h('th', {
+                      key: ev,
+                      onClick: function() { setSelectedEval(ev); },
+                      style: {
+                        padding: "8px 16px", textAlign: "center",
                         color: selectedEval === ev ? "#f0c040" : "#666",
                         fontWeight: selectedEval === ev ? 700 : 400,
-                        borderBottom: "1px solid #222",
-                        cursor: "pointer",
-                      }} onClick={() => setSelectedEval(ev)}>
-                        {ev} {selectedEval === ev ? "▲" : ""}
-                      </th>
-                    ))}
-                  </tr>
-                </thead>
-                <tbody>
-                  {WEEKS.map((week, wi) => (
-                    <tr key={week} style={{ background: wi % 2 === 0 ? "rgba(255,255,255,0.02)" : "transparent" }}>
-                      <td style={{ padding: "8px 12px", color: "#aaa" }}>{week}</td>
-                      {EVALUATIONS.map(ev => (
-                        <td key={ev} style={{
-                          padding: "8px 16px",
-                          textAlign: "center",
+                        borderBottom: "1px solid #222", cursor: "pointer",
+                      }
+                    }, ev + (selectedEval === ev ? " ▲" : ""));
+                  })
+                )
+              ),
+              h('tbody', null,
+                WEEKS.map(function(week, wi) {
+                  return h('tr', { key: week, style: { background: wi % 2 === 0 ? "rgba(255,255,255,0.02)" : "transparent" } },
+                    h('td', { style: { padding: "8px 12px", color: "#aaa" } }, week),
+                    EVALUATIONS.map(function(ev) {
+                      return h('td', {
+                        key: ev,
+                        style: {
+                          padding: "8px 16px", textAlign: "center",
                           color: selectedEval === ev ? "#fff" : "#666",
                           fontWeight: selectedEval === ev ? 600 : 400,
                           background: selectedEval === ev ? "rgba(240,192,64,0.05)" : "transparent",
-                        }}>
-                          {fmt(outshareByEval[ev][wi])}%
-                        </td>
-                      ))}
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-            <div style={{ fontSize: 11, color: "#555", marginTop: 8 }}>※ 評価名をクリックして選択</div>
-          </Section>
+                        }
+                      }, fmt(outshareByEval[ev][wi]) + "%");
+                    })
+                  );
+                })
+              )
+            )
+          ),
+          h('div', { style: { fontSize: 11, color: "#555", marginTop: 8 } }, "※ 評価名をクリックして選択")
+        ),
 
-          <Section title="03 ／ エリアデータ">
-            <InputRow label="エリアピーク客数" value={areaPeakCustomers} onChange={v => setAreaPeakCustomers(Number(v))} suffix="人" />
-            <div style={{ fontSize: 11, letterSpacing: "0.1em", color: "#888", margin: "16px 0 10px" }}>店舗一覧（1行目＝自店）</div>
-            {stores.map((store, i) => (
-              <div key={i} style={cardStyle}>
-                <input
-                  value={store.name}
-                  onChange={e => updateStore(i, "name", e.target.value)}
-                  style={{
-                    background: "transparent",
-                    border: "none",
-                    borderBottom: "1px solid rgba(255,255,255,0.15)",
-                    color: i === 0 ? "#f0c040" : "#ccc",
-                    fontSize: 13,
-                    width: 90,
-                    outline: "none",
-                    padding: "2px 4px",
-                    fontWeight: i === 0 ? 700 : 400,
-                  }}
-                />
-                <input
-                  type="number"
-                  value={store.machines}
-                  onChange={e => updateStore(i, "machines", Number(e.target.value))}
-                  style={{
-                    background: "rgba(255,255,255,0.06)",
-                    border: "1px solid rgba(255,200,0,0.2)",
-                    borderRadius: 4,
-                    color: "#fff",
-                    padding: "4px 10px",
-                    fontSize: 13,
-                    width: 90,
-                    outline: "none",
-                  }}
-                />
-                <span style={{ color: "#666", fontSize: 12 }}>台</span>
-                <span style={{ color: "#555", fontSize: 12, marginLeft: 8 }}>
-                  シェア {totalAreaMachines > 0 ? fmt(Number(store.machines) / totalAreaMachines * 100) : "0.00"}%
-                </span>
-                {stores.length > 1 && i !== 0 && (
-                  <button onClick={() => removeStore(i)} style={{
-                    marginLeft: "auto",
-                    background: "transparent",
-                    border: "none",
-                    color: "#444",
-                    cursor: "pointer",
-                    fontSize: 16,
-                  }}>✕</button>
-                )}
-              </div>
-            ))}
-            <button onClick={addStore} style={{
-              marginTop: 8,
-              background: "transparent",
-              border: "1px dashed rgba(255,200,0,0.3)",
-              borderRadius: 6,
-              color: "#f0c040",
-              padding: "6px 16px",
-              fontSize: 12,
-              cursor: "pointer",
-              letterSpacing: "0.1em",
-            }}>＋ 店舗を追加</button>
-            <div style={{
-              marginTop: 16,
-              padding: "10px 16px",
-              background: "rgba(255,255,255,0.03)",
-              borderRadius: 6,
-              fontSize: 13,
-              color: "#666",
-            }}>
-              エリア合計：<strong style={{ color: "#fff" }}>{totalAreaMachines.toLocaleString()}台</strong>
-              　自店シェア：<strong style={{ color: "#f0c040" }}>{fmt(myShare * 100)}%</strong>
-            </div>
-          </Section>
+        // 03 エリアデータ
+        h(Section, { title: "03 / エリアデータ" },
+          h(InputRow, { label: "エリアピーク客数", value: areaPeakCustomers, onChange: function(v) { setAreaPeakCustomers(Number(v)); }, suffix: "人" }),
+          h('div', { style: { fontSize: 11, letterSpacing: "0.1em", color: "#888", margin: "16px 0 10px" } }, "店舗一覧（1行目＝自店）"),
+          stores.map(function(store, i) {
+            return h('div', {
+              key: i,
+              style: {
+                background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.08)",
+                borderRadius: 8, padding: "10px 16px", marginBottom: 8,
+                display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap",
+              }
+            },
+              h('input', {
+                value: store.name,
+                onChange: function(e) { updateStore(i, "name", e.target.value); },
+                style: {
+                  background: "transparent", border: "none",
+                  borderBottom: "1px solid rgba(255,255,255,0.15)",
+                  color: i === 0 ? "#f0c040" : "#ccc",
+                  fontSize: 13, width: 90, outline: "none",
+                  padding: "2px 4px", fontWeight: i === 0 ? 700 : 400,
+                }
+              }),
+              h('input', {
+                type: "number",
+                value: store.machines,
+                onChange: function(e) { updateStore(i, "machines", Number(e.target.value)); },
+                onFocus: function(e) { e.target.select(); },
+                style: {
+                  background: "rgba(255,255,255,0.06)", border: "1px solid rgba(255,200,0,0.2)",
+                  borderRadius: 4, color: "#fff", padding: "4px 10px", fontSize: 13, width: 90, outline: "none",
+                }
+              }),
+              h('span', { style: { color: "#666", fontSize: 12 } }, "台"),
+              h('span', { style: { color: "#555", fontSize: 12, marginLeft: 8 } },
+                "シェア " + (totalAreaMachines > 0 ? fmt(Number(store.machines) / totalAreaMachines * 100) : "0.00") + "%"
+              ),
+              (stores.length > 1 && i !== 0) ? h('button', {
+                onClick: function() { removeStore(i); },
+                style: { marginLeft: "auto", background: "transparent", border: "none", color: "#444", cursor: "pointer", fontSize: 16 }
+              }, "✕") : null
+            );
+          }),
+          h('button', {
+            onClick: addStore,
+            style: {
+              marginTop: 8, background: "transparent",
+              border: "1px dashed rgba(255,200,0,0.3)", borderRadius: 6,
+              color: "#f0c040", padding: "6px 16px", fontSize: 12, cursor: "pointer", letterSpacing: "0.1em",
+            }
+          }, "＋ 店舗を追加"),
+          h('div', {
+            style: { marginTop: 16, padding: "10px 16px", background: "rgba(255,255,255,0.03)", borderRadius: 6, fontSize: 13, color: "#666" }
+          },
+            "エリア合計：", h('strong', { style: { color: "#fff" } }, totalAreaMachines.toLocaleString() + "台"),
+            "　自店シェア：", h('strong', { style: { color: "#f0c040" } }, fmt(myShare * 100) + "%")
+          )
+        ),
 
-          <Section title="04 ／ 算出結果">
-            <div style={{ display: "flex", gap: 12, marginBottom: 20, flexWrap: "wrap", alignItems: "center" }}>
-              <div style={{ fontSize: 13, color: "#aaa" }}>選択評価：</div>
-              {EVALUATIONS.map(ev => (
-                <button key={ev} onClick={() => setSelectedEval(ev)} style={{
+        // 04 算出結果
+        h(Section, { title: "04 / 算出結果" },
+          h('div', { style: { display: "flex", gap: 12, marginBottom: 20, flexWrap: "wrap", alignItems: "center" } },
+            h('div', { style: { fontSize: 13, color: "#aaa" } }, "選択評価："),
+            EVALUATIONS.map(function(ev) {
+              return h('button', {
+                key: ev,
+                onClick: function() { setSelectedEval(ev); },
+                style: {
                   background: selectedEval === ev ? "#f0c040" : "transparent",
-                  border: "1px solid rgba(240,192,64,0.4)",
-                  borderRadius: 20,
+                  border: "1px solid rgba(240,192,64,0.4)", borderRadius: 20,
                   color: selectedEval === ev ? "#000" : "#f0c040",
-                  padding: "4px 16px",
-                  fontSize: 13,
-                  fontWeight: selectedEval === ev ? 700 : 400,
-                  cursor: "pointer",
-                }}>{ev}</button>
-              ))}
-            </div>
+                  padding: "4px 16px", fontSize: 13,
+                  fontWeight: selectedEval === ev ? 700 : 400, cursor: "pointer",
+                }
+              }, ev);
+            })
+          ),
 
-            <div style={{ fontSize: 11, letterSpacing: "0.1em", color: "#888", marginBottom: 10 }}>自店 週別適正導入台数</div>
-            <div style={{ display: "flex", gap: 10, marginBottom: 24, flexWrap: "wrap" }}>
-              {WEEKS.map((week, wi) => (
-                <div key={week} style={{
-                  flex: 1,
-                  minWidth: 90,
+          // 自店週別適正台数
+          h('div', { style: { fontSize: 11, letterSpacing: "0.1em", color: "#888", marginBottom: 10 } }, "自店 週別適正導入台数"),
+          h('div', { style: { display: "flex", gap: 10, marginBottom: 24, flexWrap: "wrap" } },
+            WEEKS.map(function(week, wi) {
+              return h('div', {
+                key: week,
+                style: {
+                  flex: 1, minWidth: 90,
                   background: wi === 0 ? "rgba(240,192,64,0.12)" : "rgba(255,255,255,0.04)",
                   border: wi === 0 ? "1px solid rgba(240,192,64,0.4)" : "1px solid rgba(255,255,255,0.08)",
-                  borderRadius: 10,
-                  padding: "14px 12px",
-                  textAlign: "center",
-                }}>
-                  <div style={{ fontSize: 11, color: wi === 0 ? "#f0c040" : "#666", marginBottom: 8 }}>{week}</div>
-                  <div style={{ fontSize: 28, fontWeight: 700, color: "#fff", lineHeight: 1 }}>
-                    {Math.round(myWeeklyCount[wi])}
-                  </div>
-                  <div style={{ fontSize: 11, color: "#555", marginTop: 4 }}>台</div>
-                  <div style={{ fontSize: 10, color: "#444", marginTop: 6 }}>
-                    OS {fmt(outshareByEval[selectedEval][wi])}%
-                  </div>
-                </div>
-              ))}
-            </div>
+                  borderRadius: 10, padding: "14px 12px", textAlign: "center",
+                }
+              },
+                h('div', { style: { fontSize: 11, color: wi === 0 ? "#f0c040" : "#666", marginBottom: 8 } }, week),
+                h('div', { style: { fontSize: 28, fontWeight: 700, color: "#fff", lineHeight: 1 } }, Math.round(myWeeklyCount[wi])),
+                h('div', { style: { fontSize: 11, color: "#555", marginTop: 4 } }, "台"),
+                h('div', { style: { fontSize: 10, color: "#444", marginTop: 6 } }, "OS " + fmt(outshareByEval[selectedEval][wi]) + "%")
+              );
+            })
+          ),
 
-            <div style={{ fontSize: 11, letterSpacing: "0.1em", color: "#888", marginBottom: 10 }}>全店舗 適正導入台数（{selectedEval}評価）</div>
-            <div style={{ overflowX: "auto" }}>
-              <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 13 }}>
-                <thead>
-                  <tr>
-                    <th style={{ padding: "8px 12px", textAlign: "left", color: "#555", fontWeight: 400, borderBottom: "1px solid #1e1e1e" }}>店舗</th>
-                    <th style={{ padding: "8px 12px", textAlign: "right", color: "#555", fontWeight: 400, borderBottom: "1px solid #1e1e1e" }}>台数</th>
-                    <th style={{ padding: "8px 12px", textAlign: "right", color: "#555", fontWeight: 400, borderBottom: "1px solid #1e1e1e" }}>シェア</th>
-                    {WEEKS.map(w => (
-                      <th key={w} style={{ padding: "8px 12px", textAlign: "right", color: "#555", fontWeight: 400, borderBottom: "1px solid #1e1e1e" }}>{w}</th>
-                    ))}
-                  </tr>
-                </thead>
-                <tbody>
-                  {stores.map((store, i) => {
-                    const share = totalAreaMachines > 0 ? Number(store.machines) / totalAreaMachines : 0;
-                    const weekCounts = weeklyAreaCustomers.map(c => Math.round(c * share * 10) / 10);
-                    return (
-                      <tr key={i} style={{
-                        background: i === 0 ? "rgba(240,192,64,0.05)" : i % 2 === 0 ? "rgba(255,255,255,0.02)" : "transparent",
-                      }}>
-                        <td style={{ padding: "8px 12px", color: i === 0 ? "#f0c040" : "#ccc", fontWeight: i === 0 ? 700 : 400 }}>{store.name}</td>
-                        <td style={{ padding: "8px 12px", textAlign: "right", color: "#aaa" }}>{Number(store.machines).toLocaleString()}</td>
-                        <td style={{ padding: "8px 12px", textAlign: "right", color: "#aaa" }}>{fmt(share * 100)}%</td>
-                        {weekCounts.map((c, wi) => (
-                          <td key={wi} style={{
-                            padding: "8px 12px",
-                            textAlign: "right",
-                            color: i === 0 ? "#fff" : "#888",
-                            fontWeight: i === 0 ? 600 : 400,
-                          }}>
-                            {Math.round(c)}台
-                          </td>
-                        ))}
-                      </tr>
-                    );
-                  })}
-                </tbody>
-                <tfoot>
-                  <tr style={{ borderTop: "1px solid #222" }}>
-                    <td colSpan={3} style={{ padding: "8px 12px", color: "#555", fontSize: 12 }}>エリア合計</td>
-                    {totalAreaCount.map((c, wi) => (
-                      <td key={wi} style={{ padding: "8px 12px", textAlign: "right", color: "#666", fontSize: 12 }}>{Math.round(c)}台</td>
-                    ))}
-                  </tr>
-                </tfoot>
-              </table>
-            </div>
+          // 全店舗テーブル
+          h('div', { style: { fontSize: 11, letterSpacing: "0.1em", color: "#888", marginBottom: 10 } }, "全店舗 適正導入台数（" + selectedEval + "評価）"),
+          h('div', { style: { overflowX: "auto" } },
+            h('table', { style: { width: "100%", borderCollapse: "collapse", fontSize: 13 } },
+              h('thead', null,
+                h('tr', null,
+                  h('th', { style: { padding: "8px 12px", textAlign: "left", color: "#555", fontWeight: 400, borderBottom: "1px solid #1e1e1e" } }, "店舗"),
+                  h('th', { style: { padding: "8px 12px", textAlign: "right", color: "#555", fontWeight: 400, borderBottom: "1px solid #1e1e1e" } }, "台数"),
+                  h('th', { style: { padding: "8px 12px", textAlign: "right", color: "#555", fontWeight: 400, borderBottom: "1px solid #1e1e1e" } }, "シェア"),
+                  WEEKS.map(function(w) {
+                    return h('th', { key: w, style: { padding: "8px 12px", textAlign: "right", color: "#555", fontWeight: 400, borderBottom: "1px solid #1e1e1e" } }, w);
+                  })
+                )
+              ),
+              h('tbody', null,
+                stores.map(function(store, i) {
+                  const share = totalAreaMachines > 0 ? Number(store.machines) / totalAreaMachines : 0;
+                  const weekCounts = weeklyAreaCustomers.map(function(c) { return Math.round(c * share * 10) / 10; });
+                  return h('tr', {
+                    key: i,
+                    style: { background: i === 0 ? "rgba(240,192,64,0.05)" : i % 2 === 0 ? "rgba(255,255,255,0.02)" : "transparent" }
+                  },
+                    h('td', { style: { padding: "8px 12px", color: i === 0 ? "#f0c040" : "#ccc", fontWeight: i === 0 ? 700 : 400 } }, store.name),
+                    h('td', { style: { padding: "8px 12px", textAlign: "right", color: "#aaa" } }, Number(store.machines).toLocaleString()),
+                    h('td', { style: { padding: "8px 12px", textAlign: "right", color: "#aaa" } }, fmt(share * 100) + "%"),
+                    weekCounts.map(function(c, wi) {
+                      return h('td', {
+                        key: wi,
+                        style: { padding: "8px 12px", textAlign: "right", color: i === 0 ? "#fff" : "#888", fontWeight: i === 0 ? 600 : 400 }
+                      }, Math.round(c) + "台");
+                    })
+                  );
+                })
+              ),
+              h('tfoot', null,
+                h('tr', { style: { borderTop: "1px solid #222" } },
+                  h('td', { colSpan: 3, style: { padding: "8px 12px", color: "#555", fontSize: 12 } }, "エリア合計"),
+                  totalAreaCount.map(function(c, wi) {
+                    return h('td', { key: wi, style: { padding: "8px 12px", textAlign: "right", color: "#666", fontSize: 12 } }, Math.round(c) + "台");
+                  })
+                )
+              )
+            )
+          ),
 
-            <div style={{ fontSize: 11, letterSpacing: "0.1em", color: "#888", margin: "24px 0 10px" }}>導入推奨台数（5週目アウトシェアベース）</div>
-            <div style={{
+          // 導入推奨台数
+          h('div', { style: { fontSize: 11, letterSpacing: "0.1em", color: "#888", margin: "24px 0 10px" } }, "導入推奨台数（5週目アウトシェアベース）"),
+          h('div', {
+            style: {
               padding: "20px 24px",
-              background: "rgba(240,192,64,0.08)",
-              border: "1px solid rgba(240,192,64,0.35)",
-              borderRadius: 12,
-              display: "flex",
-              alignItems: "center",
-              gap: 24,
-              marginBottom: 24,
-              flexWrap: "wrap",
-            }}>
-              <div style={{ textAlign: "center" }}>
-                <div style={{ fontSize: 11, color: "#f0c040", letterSpacing: "0.15em", marginBottom: 6 }}>自店 導入推奨台数</div>
-                <div style={{ fontSize: 52, fontWeight: 700, color: "#f0c040", lineHeight: 1 }}>
-                  {Math.round(myWeeklyCount[4])}
-                </div>
-                <div style={{ fontSize: 13, color: "#a08020", marginTop: 4 }}>台</div>
-              </div>
-              <div style={{ flex: 1, minWidth: 200 }}>
-                <div style={{ fontSize: 12, color: "#666", marginBottom: 10 }}>競合店 導入推奨台数</div>
-                <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
-                  {stores.slice(1).map((store, i) => {
-                    const share = totalAreaMachines > 0 ? Number(store.machines) / totalAreaMachines : 0;
-                    const count = Math.round(weeklyAreaCustomers[4] * share);
-                    return (
-                      <div key={i} style={{
-                        background: "rgba(255,255,255,0.04)",
-                        border: "1px solid rgba(255,255,255,0.1)",
-                        borderRadius: 8,
-                        padding: "8px 14px",
-                        textAlign: "center",
-                        minWidth: 70,
-                      }}>
-                        <div style={{ fontSize: 11, color: "#666", marginBottom: 4 }}>{store.name}</div>
-                        <div style={{ fontSize: 20, fontWeight: 600, color: "#ccc" }}>{count}</div>
-                        <div style={{ fontSize: 10, color: "#444" }}>台</div>
-                      </div>
-                    );
-                  })}
-                </div>
-              </div>
-              <div style={{
-                padding: "12px 16px",
-                background: "rgba(0,0,0,0.2)",
-                borderRadius: 8,
-                fontSize: 12,
-                color: "#666",
-                lineHeight: 1.8,
-              }}>
-                <div>評価：<strong style={{ color: "#f0c040" }}>{selectedEval}</strong></div>
-                <div>5週目OS：<strong style={{ color: "#fff" }}>{fmt(outshareByEval[selectedEval][4])}%</strong></div>
-                <div>エリア客数：<strong style={{ color: "#fff" }}>{fmt(weeklyAreaCustomers[4])}人</strong></div>
-              </div>
-            </div>
+              background: isBad ? "rgba(255,140,0,0.06)" : "rgba(240,192,64,0.08)",
+              border: isBad ? "1px solid rgba(255,140,0,0.35)" : "1px solid rgba(240,192,64,0.35)",
+              borderRadius: 12, display: "flex", alignItems: "center", gap: 24, marginBottom: 24, flexWrap: "wrap",
+            }
+          },
+            h('div', { style: { textAlign: "center" } },
+              h('div', { style: { fontSize: 11, color: isBad ? "#ff8c00" : "#f0c040", letterSpacing: "0.15em", marginBottom: 6 } }, "自店 導入推奨台数"),
+              h('div', { style: { fontSize: 52, fontWeight: 700, color: isBad ? "#ff8c00" : "#f0c040", lineHeight: 1 } }, Math.round(myWeeklyCount[4])),
+              h('div', { style: { fontSize: 13, color: isBad ? "#ff8c00" : "#a08020", marginTop: 4 } }, "台"),
+              isBad ? h('div', {
+                style: {
+                  marginTop: 10, padding: "6px 12px",
+                  background: "rgba(255,140,0,0.15)", border: "1px solid rgba(255,140,0,0.5)",
+                  borderRadius: 6, fontSize: 12, color: "#ff8c00", fontWeight: 700, letterSpacing: "0.05em",
+                }
+              }, "⚠ 悪評価のため導入非推奨") : null
+            ),
+            h('div', { style: { flex: 1, minWidth: 200 } },
+              h('div', { style: { fontSize: 12, color: "#666", marginBottom: 10 } }, "競合店 導入推奨台数"),
+              h('div', { style: { display: "flex", flexWrap: "wrap", gap: 8 } },
+                stores.slice(1).map(function(store, i) {
+                  const share = totalAreaMachines > 0 ? Number(store.machines) / totalAreaMachines : 0;
+                  const count = Math.round(weeklyAreaCustomers[4] * share);
+                  return h('div', {
+                    key: i,
+                    style: {
+                      background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.1)",
+                      borderRadius: 8, padding: "8px 14px", textAlign: "center", minWidth: 70,
+                    }
+                  },
+                    h('div', { style: { fontSize: 11, color: "#666", marginBottom: 4 } }, store.name),
+                    h('div', { style: { fontSize: 20, fontWeight: 600, color: "#ccc" } }, count),
+                    h('div', { style: { fontSize: 10, color: "#444" } }, "台")
+                  );
+                })
+              )
+            ),
+            h('div', {
+              style: { padding: "12px 16px", background: "rgba(0,0,0,0.2)", borderRadius: 8, fontSize: 12, color: "#666", lineHeight: 1.8 }
+            },
+              h('div', null, "評価：", h('strong', { style: { color: isBad ? "#ff8c00" : "#f0c040" } }, selectedEval)),
+              h('div', null, "5週目OS：", h('strong', { style: { color: "#fff" } }, fmt(outshareByEval[selectedEval][4]) + "%")),
+              h('div', null, "エリア客数：", h('strong', { style: { color: "#fff" } }, fmt(weeklyAreaCustomers[4]) + "人"))
+            )
+          ),
 
-            <div style={{
-              marginTop: 20,
-              padding: "16px 20px",
+          // 充足率
+          h('div', {
+            style: {
+              marginTop: 20, padding: "16px 20px",
               background: sufficiencyRate > 100 ? "rgba(255,80,80,0.08)" : "rgba(80,200,120,0.08)",
-              border: `1px solid ${sufficiencyRate > 100 ? "rgba(255,80,80,0.3)" : "rgba(80,200,120,0.3)"}`,
-              borderRadius: 10,
-              display: "flex",
-              alignItems: "center",
-              gap: 20,
-              flexWrap: "wrap",
-            }}>
-              <div>
-                <div style={{ fontSize: 11, color: "#666", marginBottom: 4 }}>エリア充足率（初週）</div>
-                <div style={{ fontSize: 32, fontWeight: 700, color: sufficiencyRate > 100 ? "#ff6060" : "#60c880" }}>
-                  {fmt(sufficiencyRate)}%
-                </div>
-              </div>
-              <div style={{ fontSize: 13, color: "#666" }}>
-                {sufficiencyRate > 100 ? "⚠ 需要超過（エリアが飽和傾向）" : "✓ 需要あり（導入余地あり）"}
-              </div>
-            </div>
-          </Section>
+              border: "1px solid " + (sufficiencyRate > 100 ? "rgba(255,80,80,0.3)" : "rgba(80,200,120,0.3)"),
+              borderRadius: 10, display: "flex", alignItems: "center", gap: 20, flexWrap: "wrap",
+            }
+          },
+            h('div', null,
+              h('div', { style: { fontSize: 11, color: "#666", marginBottom: 4 } }, "エリア充足率（初週）"),
+              h('div', { style: { fontSize: 32, fontWeight: 700, color: sufficiencyRate > 100 ? "#ff6060" : "#60c880" } }, fmt(sufficiencyRate) + "%")
+            ),
+            h('div', { style: { fontSize: 13, color: "#666" } },
+              sufficiencyRate > 100 ? "⚠ 需要超過（エリアが飽和傾向）" : "✓ 需要あり（導入余地あり）"
+            )
+          )
+        ),
 
-          <div style={{ textAlign: "center", fontSize: 11, color: "#333", marginTop: 16, paddingBottom: 32 }}>
-            アウトシェア＝県内販売台数÷県内最大遊技人数　／　適正台数＝エリアピーク客数×アウトシェア×店舗シェア
-          </div>
-        </div>
+        // フッター
+        h('div', { style: { textAlign: "center", fontSize: 11, color: "#333", marginTop: 16, paddingBottom: 32 } },
+          "アウトシェア＝県内販売台数÷県内最大遊技人数　／　適正台数＝エリアピーク客数×アウトシェア×店舗シェア"
+        )
       );
     }
 
-    ReactDOM.createRoot(document.getElementById("root")).render(<App />);
+    ReactDOM.createRoot(document.getElementById("root")).render(React.createElement(App));
   </script>
 </body>
 </html>
