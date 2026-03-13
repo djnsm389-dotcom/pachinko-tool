@@ -1,4 +1,3 @@
-
 <!DOCTYPE html>
 <html lang="ja">
 <head>
@@ -105,6 +104,7 @@
       const [prefMachines, setPrefMachines] = useState(13545);
       const [peakOccupancy, setPeakOccupancy] = useState(23.5);
       const [prefRatio, setPrefRatio] = useState(2);
+      const [machineName, setMachineName] = useState("");
       const [nationalSales, setNationalSales] = useState(8000);
       const [selectedEval, setSelectedEval] = useState("良");
       const [areaPeakCustomers, setAreaPeakCustomers] = useState(1300);
@@ -186,7 +186,40 @@
 
         // 02 機種データ
         h(Section, { title: "02 / 機種データ" },
-          h(InputRow, { label: "全国販売台数", value: nationalSales, onChange: function(v) { setNationalSales(Number(v)); }, suffix: "台" }),
+          h('div', { style: { display: "flex", alignItems: "center", marginBottom: 12, gap: 12, flexWrap: "wrap" } },
+            h('label', { style: { color: "#aaa", fontSize: 13, width: 200, flexShrink: 0 } }, "機種名　／　全国販売台数"),
+            h('div', { style: { display: "flex", alignItems: "center", gap: 8 } },
+              h('input', {
+                type: "text",
+                value: machineName,
+                onChange: function(e) { setMachineName(e.target.value); },
+                placeholder: "機種名を入力",
+                style: {
+                  background: "rgba(255,255,255,0.06)",
+                  border: "1px solid rgba(255,200,0,0.3)",
+                  borderRadius: 6, color: "#fff",
+                  padding: "6px 12px", fontSize: 14, width: 200,
+                  outline: "none", marginRight: 8,
+                  fontFamily: "inherit",
+                }
+              }),
+              h('input', {
+                type: "text",
+                inputMode: "decimal",
+                defaultValue: nationalSales,
+                onBlur: function(e) { setNationalSales(Number(e.target.value)); },
+                onFocus: function(e) { e.target.select(); },
+                style: {
+                  background: "rgba(255,255,255,0.06)",
+                  border: "1px solid rgba(255,200,0,0.3)",
+                  borderRadius: 6, color: "#fff",
+                  padding: "6px 12px", fontSize: 14, width: 130,
+                  outline: "none",
+                }
+              }),
+              h('span', { style: { color: "#888", fontSize: 13 } }, "台")
+            )
+          ),
           h('div', {
             style: { marginTop: 16, padding: "12px 16px", background: "rgba(240,192,64,0.08)", borderRadius: 8, border: "1px solid rgba(240,192,64,0.2)", fontSize: 13, marginBottom: 20 }
           },
@@ -427,11 +460,20 @@
               )
             ),
             h('div', {
-              style: { padding: "12px 16px", background: "rgba(0,0,0,0.2)", borderRadius: 8, fontSize: 12, color: "#666", lineHeight: 1.8 }
+              style: { padding: "14px 18px", background: "rgba(0,0,0,0.2)", borderRadius: 8, fontSize: 13, color: "#666", lineHeight: 2.2 }
             },
-              h('div', null, "評価：", h('strong', { style: { color: isBad ? "#ff8c00" : "#f0c040" } }, selectedEval)),
-              h('div', null, "5週目OS：", h('strong', { style: { color: "#fff" } }, fmt(outshareByEval[selectedEval][4]) + "%")),
-              h('div', null, "エリア客数：", h('strong', { style: { color: "#fff" } }, fmt(weeklyAreaCustomers[4]) + "人"))
+              h('div', null,
+                h('span', { style: { fontSize: 11, color: "#666" } }, "評価　"),
+                h('strong', { style: { color: isBad ? "#ff8c00" : "#f0c040", fontSize: 16, fontFamily: "inherit" } }, selectedEval)
+              ),
+              h('div', null,
+                h('span', { style: { fontSize: 11, color: "#666" } }, "5週目アウトシェア　"),
+                h('strong', { style: { color: "#fff", fontSize: 16 } }, fmt(outshareByEval[selectedEval][4]) + "%")
+              ),
+              h('div', null,
+                h('span', { style: { fontSize: 11, color: "#666" } }, "エリア予測客数　"),
+                h('strong', { style: { color: "#fff", fontSize: 16 } }, fmt(weeklyAreaCustomers[4]) + "人")
+              )
             )
           ),
 
